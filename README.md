@@ -1,70 +1,49 @@
-# TASK_LOWPOWER_WAIT — Linux Scheduler Extension
+# TASK_LOWPOWER_WAIT — расширение планировщика Linux
 
-## Project Description
+## Описание проекта
 
-**TASK_LOWPOWER_WAIT** is a new process state in the Linux kernel designed to transition tasks into a low-power waiting mode while idle.  
-Unlike standard states (`TASK_INTERRUPTIBLE`, `TASK_UNINTERRUPTIBLE`, etc.), this state integrates with power management subsystems (`cpuidle`, `CPUfreq`) and allows control through a `sysfs` interface.
+**TASK_LOWPOWER_WAIT** — это новое состояние процесса в ядре Linux, предназначенное для перевода задач в режим пониженного энергопотребления при ожидании событий.  
+В отличие от стандартных состояний (`TASK_INTERRUPTIBLE`, `TASK_UNINTERRUPTIBLE` и др.), данное состояние интегрировано с подсистемами энергосбережения (`cpuidle`, `CPUfreq`) и позволяет управлять поведением через интерфейс `sysfs`.
 
-The primary goal of this project is to **explore and impact key Linux kernel subsystems**, including:
-- Task scheduler
-- Power management (`cpuidle`, `CPUfreq` governors)
-- Timer subsystems (timers, hrtimers)
-- Kernel-to-userspace interaction (`sysfs`, `procfs`)
-- Context switching and task migration on SMP systems
+Основная цель проекта — **изучить и затронуть ключевые подсистемы ядра Linux**, включая:
+- Планировщик задач (scheduler)
+- Управление энергопотреблением (cpuidle, CPUfreq governors)
+- Подсистему таймеров (timers, hrtimers)
+- Взаимодействие ядра с пространством пользователя (sysfs, procfs)
+- Контекстное переключение и миграцию задач на SMP-системах
 
-While research-focused, the project also aims to reduce power consumption in scenarios where tasks can safely enter deeper waiting states.
-
----
-
-## Motivation
-
-Modern processors—especially big.LITTLE architectures—feature multiple C-states and support dynamic frequency scaling.  
-However, standard task sleep states do not explicitly signal that a task is safe to be in a deep low-power state.
-
-**TASK_LOWPOWER_WAIT** addresses this by:
-- Introducing a new flag in `task_struct` recognized by the scheduler
-- Triggering the CPU to enter deeper C-states when no active tasks are running
-- Allowing user and system services to manage this behavior explicitly
+Проект ориентирован на исследовательские задачи, но также имеет прикладной смысл — снижение энергопотребления в сценариях, где задачи могут быть переведены в глубокие состояния ожидания.
 
 ---
 
-## Architecture
-
-1. **Task Structure Changes**
-   - New flag/state: `TASK_LOWPOWER_WAIT`
-   - Modifications in `include/linux/sched.h` and related scheduler code
-
-2. **Scheduler Integration**
-   - Handling logic in `kernel/sched/core.c` for tasks in this state
-   - Proper task migration and runqueue interaction
-
-3. **Power Management Hooks**
-   - Interaction with `cpuidle` and `CPUfreq` to select optimal C-state/P-state
-   - Potential extension for big.LITTLE architectures
-
-4. **Control Interface**
-   - Sysfs node `/sys/kernel/task_lowpower` to manage task states
-   - Visibility in `/proc` and via `ps` command
-
-5. **Testing**
-   - QEMU SMP environment
-   - Load tests (e.g., `sysbench`, `stress-ng`)
-   - Metric comparison between standard and modified scheduler
+Подробно ознакомиться с мотивацией и целями вы можете с помощью написанной документации:
+1. [Текущие состояния процессов в ядре](./branch_docs/current_process_states.md)
+2. [Как работает упрощенно Power Management](./branch_docs/current_power_management.md)
+3. [Мотивация проекта и поставленные цели](./branch_docs/project_goals.md)
 
 ---
 
-## Build and Testing
+## Архитектура
 
-1. Kernel build:
-   ```bash
-   make defconfig
-   make menuconfig  # enable CONFIG_SCHED_DEBUG, CONFIG_DEBUG_KERNEL
-   make -j$(nproc)
+1. **Изменения в структуре задачи**
+   - Добавлен новый флаг состояния: `TASK_LOWPOWER_WAIT`
+   - Модификации в `include/linux/sched.h` и связанных участках кода планировщика
 
-2. Running in qemu:
-```bash
-qemu-system-x86_64 -kernel arch/x86/boot/bzImage \
-    -append "root=/dev/sda console=ttyS0" \
-    -hda rootfs.img -nographic -smp 4
+2. **Интеграция с планировщиком**
+   - Логика в `kernel/sched/core.c` для обработки задач с этим состоянием
+   - Корректная миграция задач и взаимодействие с runqueue
 
-```
+3. **Энергосберегающие механизмы**
+   - Связка с `cpuidle` и `CPUfreq` для выбора оптимального C-state/P-state
+   - Возможность расширения для архитектур big.LITTLE
+
+4. **Интерфейс управления**
+   - Sysfs-узел `/sys/kernel/task_lowpower` для установки состояния задач
+   - Отображение состояния в `/proc` и `ps`
+
+5. **Тестирование**
+   - QEMU с SMP-конфигурацией
+   - Нагрузочные тесты (`sysbench`, `stress-ng`)
+   - Сравнение метрик работы стандартного планировщика и модифицированного
+
+---
